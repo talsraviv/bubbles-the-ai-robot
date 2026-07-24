@@ -111,6 +111,12 @@ butler into anything), its safety rules, its seek protocol, and a catalog of the
 own demo abilities. `scripts/` is eight small bash files, each a thin, safety-wrapped
 handle on the vendor's Python API — read them in five minutes, then add your own.
 
+Your robot also **remembers you** — preferences, promises, what it learns about the
+house — in a `memory/` folder that is gitignored and never leaves your machine. The
+skill is the shared species; the memory is your particular robot's life. (It was born
+from a real moment: our robot's first stored memory is how its owner asked to be
+greeted in the morning, settled entirely by voice.)
+
 The gotchas section of `SKILL.md` is the real treasure: every entry was learned on real
 hardware — the amp that's silently gated behind a GPIO, the sound route that hijacks
 itself, the sonar that can't see ankles. Trust it over the tutorials, and send back what
