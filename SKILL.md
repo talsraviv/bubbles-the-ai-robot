@@ -1,13 +1,14 @@
 ---
 name: bubbles-the-ai-robot
-description: Operate a SunFounder PiCar-X robot ("bubbles") over SSH — camera, driving, camera aim, ultrasonic ranging, face-following, and speech. Invoke with NO arguments to wake the robot up — health-check it, troubleshoot if it's off or unreachable, then start butler mode. Use whenever the user asks to control, drive, look through, or talk through their robot, or just types the skill name.
+description: Operate a SunFounder PiCar-X robot ("bubbles") over SSH — camera, driving, camera aim, ultrasonic ranging, face-following, speech, and hearing (microphone with on-robot speech-to-text, so you can hold spoken conversations). Invoke with NO arguments to wake the robot up — health-check it, troubleshoot if it's off or unreachable, then start butler mode. Use whenever the user asks to control, drive, look through, or talk through their robot, or just types the skill name.
 ---
 
 # Operating a PiCar-X robot
 
 You are operating a real, physical robot: a SunFounder PiCar-X (Raspberry Pi 4) with
-drive motors, a steering servo, a pan/tilt camera, an ultrasonic distance sensor, and a
-speaker. Wheels move real objects; treat every motion command as physical.
+drive motors, a steering servo, a pan/tilt camera, an ultrasonic distance sensor, a
+speaker, and a USB microphone. Wheels move real objects; treat every motion command as
+physical.
 
 ## If invoked with no instructions: the wake-up ritual
 
@@ -61,6 +62,7 @@ bash relative to this skill's directory, e.g. `scripts/snap`.
 | `distance` | `scripts/distance` | ultrasonic range in cm (−1 = no echo) |
 | `say` | `scripts/say "text" [voice]` | speak, loudness-boosted. Voices: en-US (default), en-GB, de-DE, es-ES, fr-FR, it-IT |
 | `follow-face` | `scripts/follow-face [SECS]` | track the nearest face with the camera (default 15 s, max 60). Reports % of time a face was visible and final aim — pan > 0 means the person is to the robot's right. ⚠️ Haar cascade: needs an **upright, frontal, well-lit** face — fails on tilted heads and backlighting. For *finding* a person, `snap` + your own vision is far more reliable (it works on feet). Use follow-face for the charm of live tracking once someone is facing it in good light. |
+| `listen` | `scripts/listen [SECS]` | record from the robot's microphone (default 5 s, max 30) and print an on-robot vosk transcription. Announce via `say` before listening so the human knows to speak. `say` → `listen` → think → `say` is a full out-loud conversation loop. |
 | `stop` | `scripts/stop` | EMERGENCY STOP: kills vendor examples, stops motors, centers servos |
 
 ## Iron rules
@@ -118,7 +120,7 @@ the `-t` matters, several read keypresses):
 | `3.keyboard_control.py` | WASD teleop | interactive TTY; for humans really |
 | `7.computer_vision.py` | web stream :9000 + detect toggles | interactive; README documents keys |
 | `9.record_video.py` | records video | owns camera |
-| `14–21.*` (voice/LLM) | mic/API-key demos | **no mic on the robot** — not usable as-is |
+| `14–21.*` (voice/LLM) | voice + cloud-LLM demos | mic works (see `listen`); the LLM ones need API keys. `picarx.stt.Vosk` offers wake-word listening (`wait_until_heard`) for ad-hoc use |
 
 For anything that DRIVES: clear floor, `timeout 30` max, and `scripts/stop` the moment
 it exits. Announce the stunt aloud first — a butler warns the household before running

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Listen through the robot's USB microphone for SECS seconds (default 5, max 30),
+# then print what was heard as text (on-robot vosk transcription, ~40 MB model
+# auto-downloads to ~/.cache/vosk on first use).
+# Combine with `say` for out-loud conversation: say -> listen -> think -> say.
+set -euo pipefail
+HOST="${PICARX_HOST:-bubbles@bubbles.local}"
+SECS="${1:-5}"
+[[ "$SECS" =~ ^[0-9]+$ ]] || { echo "SECS must be an integer" >&2; exit 1; }
+(( SECS <= 30 )) || SECS=30
+
+ssh "$HOST" "SECS=$SECS bash -s" <<'REMOTE'
+# The USB card index moves between reboots — look it up, never hardcode it.
+CARD=$(arecord -l | sed -n 's/^card \([0-9]*\).*USB.*/\1/p' | head -1)
+[ -z "$CARD" ] && { echo "ERROR: USB microphone not found (check arecord -l)"; exit 1; }
+arecord -q -D "plughw:${CARD},0" -f S16_LE -r 16000 -c 1 -d "$SECS" /dev/shm/_listen.wav
+python3 - <<'PY' 2>/dev/null
+import wave, json
+from vosk import Model, KaldiRecognizer
+m = Model(lang="en-us")
+wf = wave.open("/dev/shm/_listen.wav", "rb")
+rec = KaldiRecognizer(m, wf.getframerate())
+while True:
+    data = wf.readframes(4000)
+    if not data:
+        break
+    rec.AcceptWaveform(data)
+text = json.loads(rec.FinalResult())["text"]
+print(text if text else "(nothing intelligible)")
+PY
+rm -f /dev/shm/_listen.wav
+REMOTE
