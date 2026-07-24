@@ -7,6 +7,8 @@ ssh -o ConnectTimeout=5 "$HOST" bash -s <<'REMOTE'
 echo "host: $(hostname) up $(uptime -p | sed 's/^up //')"
 CAM=$(rpicam-hello --list-cameras 2>&1 | grep -c '^[0-9] :' || true)
 echo "camera: $([ "$CAM" -ge 1 ] && echo present || echo NOT DETECTED)"
+MIC=$(arecord -l 2>/dev/null | grep -c '^card [0-9]*:.*USB' || true)
+echo "microphone: $([ "$MIC" -ge 1 ] && echo present || echo "NOT FOUND (voice mode unavailable — use text chat)")"
 python3 - <<'PY' 2>/dev/null || echo "battery: n/a"
 try:
     from robot_hat import utils

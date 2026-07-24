@@ -51,11 +51,14 @@ export PICARX_HOST=your-user@your-pi.local
 
 ## Play
 
-Open a thread in your agent, type `/bubbles-the-ai-robot` with nothing else, and approve the commands
-it proposes. The skill tells the agent to wake the robot, health-check it, troubleshoot
-it if it's asleep, find you, and report for duty — in character.
+Open a thread in your agent, type `/bubbles-the-ai-robot` with nothing else, and approve
+the commands it proposes. The robot checks itself out (troubleshooting itself if needed),
+then **calls you over and starts a spoken conversation** — that's the interface. It
+explains its own protocol out loud: a rising beep means *your turn to talk*; a low tone
+means *heard you, thinking*. The keyboard still works — as the fallback and for anything
+too long to say — but the main loop is you and a small robot, talking.
 
-Then just talk to it:
+Things to say to it (out loud, or typed):
 
 - "Chase me around the house and deliver my unread email — only when you're within 50 cm."
 - "Patrol the hallway and describe anything out of place."

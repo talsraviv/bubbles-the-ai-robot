@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# One full conversation turn through the robot — the skill's PRIMARY interface.
+# Speaks TEXT, plays the your-turn beep (bright rising pair), records the human
+# for LISTEN_SECS, plays the processing cue (single low tone), prints transcript.
+# stdout = what the human said, or "(nothing intelligible)".
+# Usage: converse "text to say" [LISTEN_SECS]   (default 8, max 30)
+set -euo pipefail
+HOST="${PICARX_HOST:-bubbles@bubbles.local}"
+TEXT="${1:?usage: converse \"text to say\" [listen_secs]}"
+SECS="${2:-8}"
+[[ "$SECS" =~ ^[0-9]+$ ]] || { echo "SECS must be an integer" >&2; exit 1; }
+(( SECS <= 30 )) || SECS=30
+B64=$(printf '%s' "$TEXT" | base64 | tr -d '\n')
+
+ssh "$HOST" "T_B64='$B64' SECS=$SECS bash -s" <<'REMOTE'
+set -u
+TEXT=$(printf '%s' "$T_B64" | base64 -d)
+python3 -c "from robot_hat import device; device.enable_speaker()" 2>/dev/null
+CARD=$(aplay -l | sed -n 's/^card \([0-9]*\).*sndrpihifiberry.*/\1/p' | head -1)
+[ -n "$CARD" ] && amixer -c "$CARD" sset "robot-hat speaker" 100% >/dev/null 2>&1
+MIC=$(arecord -l | sed -n 's/^card \([0-9]*\).*USB.*/\1/p' | head -1)
+[ -z "$MIC" ] && { echo "ERROR: USB microphone not found — fall back to text chat"; exit 1; }
+
+COMP="compand 0.02,0.20 -50,-12,-30,-6,-20,-4,-10,-2,0,-1 0 -90 0.05"
+pico2wave -w /dev/shm/_c.wav "$TEXT" && play -q /dev/shm/_c.wav $COMP norm -0.5 2>/dev/null
+
+# Your-turn beep: bright rising pair = "I'm listening, speak now"
+play -qn synth 0.12 sine 880 vol 0.6 2>/dev/null
+play -qn synth 0.15 sine 1320 vol 0.6 2>/dev/null
+
+arecord -q -D "plughw:${MIC},0" -f S16_LE -r 16000 -c 1 -d "$SECS" /dev/shm/_heard.wav
+
+# Processing cue: single low tone = "got it, thinking"
+play -qn synth 0.18 sine 440 vol 0.45 2>/dev/null
+
+python3 - <<'PY' 2>/dev/null
+import wave, json
+from vosk import Model, KaldiRecognizer
+m = Model(lang="en-us")
+wf = wave.open("/dev/shm/_heard.wav", "rb")
+rec = KaldiRecognizer(m, wf.getframerate())
+while True:
+    data = wf.readframes(4000)
+    if not data:
+        break
+    rec.AcceptWaveform(data)
+text = json.loads(rec.FinalResult())["text"]
+print(text if text else "(nothing intelligible)")
+PY
+rm -f /dev/shm/_c.wav /dev/shm/_heard.wav
+REMOTE
