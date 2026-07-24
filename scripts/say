@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Speak through the robot's speaker, loudness-boosted.
+# Usage: say "text to speak" [voice]
+#   voice: en-US (default), en-GB, de-DE, es-ES, fr-FR, it-IT
+set -euo pipefail
+HOST="${PICARX_HOST:-bubbles@bubbles.local}"
+TEXT="${1:?usage: say \"text to speak\" [voice]}"
+VOICE="${2:-en-US}"
+
+[[ "$VOICE" =~ ^[a-z]{2}-[A-Z]{2}$ ]] || { echo "voice must look like en-US" >&2; exit 1; }
+
+# Text goes over as base64 to dodge every quoting pitfall.
+B64=$(printf '%s' "$TEXT" | base64 | tr -d '\n')
+
+ssh "$HOST" "T_B64='$B64' VOICE='$VOICE' bash -s" <<'REMOTE'
+set -u
+TEXT=$(printf '%s' "$T_B64" | base64 -d)
+
+# The amp is gated behind a GPIO and off by default — without this, silence.
+python3 -c "from robot_hat import device; device.enable_speaker()" 2>/dev/null
+
+CARD=$(aplay -l | sed -n 's/^card \([0-9]*\).*sndrpihifiberry.*/\1/p' | head -1)
+[ -n "$CARD" ] && amixer -c "$CARD" sset "robot-hat speaker" 100% >/dev/null 2>&1
+
+pico2wave -l "$VOICE" -w /dev/shm/_say.wav "$TEXT"
+# Compress dynamic range then normalize — TTS is quiet by RMS, not by peak.
+play -q /dev/shm/_say.wav compand 0.02,0.20 -50,-12,-30,-6,-20,-4,-10,-2,0,-1 0 -90 0.05 norm -0.5 2>/dev/null
+rm -f /dev/shm/_say.wav
+REMOTE

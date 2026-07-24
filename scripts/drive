@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Time-boxed motion: moves, sleeps, stops — all in one process on the robot.
+# Usage: drive SPEED SECS [STEER]
+#   SPEED  -100..100, sign = direction (clamped to ±60)
+#   SECS   duration, clamped to 3.0
+#   STEER  steering angle -30..30, default 0
+set -euo pipefail
+HOST="${PICARX_HOST:-bubbles@bubbles.local}"
+SPEED="${1:?usage: drive SPEED SECS [STEER]}"
+SECS="${2:?usage: drive SPEED SECS [STEER]}"
+STEER="${3:-0}"
+
+[[ "$SPEED" =~ ^-?[0-9]+$ ]] || { echo "SPEED must be an integer" >&2; exit 1; }
+[[ "$STEER" =~ ^-?[0-9]+$ ]] || { echo "STEER must be an integer" >&2; exit 1; }
+[[ "$SECS" =~ ^[0-9]+(\.[0-9]+)?$ ]] || { echo "SECS must be a positive number" >&2; exit 1; }
+
+ssh "$HOST" "SPEED=$SPEED SECS=$SECS STEER=$STEER python3 - <<'PY'
+import os, time
+from picarx import Picarx
+
+speed = max(-60, min(60, int(os.environ['SPEED'])))
+secs  = min(3.0, float(os.environ['SECS']))
+steer = max(-30, min(30, int(os.environ['STEER'])))
+
+px = Picarx()
+try:
+    px.set_dir_servo_angle(steer)
+    time.sleep(0.1)
+    (px.forward if speed >= 0 else px.backward)(abs(speed))
+    time.sleep(secs)
+finally:
+    px.stop()
+    time.sleep(0.1)
+    px.stop()          # belt and braces — motors must not stay pinned
+    px.set_dir_servo_angle(0)
+print(f'moved: speed={speed} steer={steer} secs={secs}')
+PY"

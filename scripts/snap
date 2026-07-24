@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Grab one camera frame to a local JPEG. Prints the local path.
+# Usage: snap [out.jpg]
+set -euo pipefail
+HOST="${PICARX_HOST:-bubbles@bubbles.local}"
+OUT="${1:-/tmp/bubbles-frame.jpg}"
+
+if ssh "$HOST" 'rpicam-still -n -t 800 --width 1296 --height 972 -o /dev/shm/snap.jpg' 2>/dev/null; then
+  scp -q "$HOST:/dev/shm/snap.jpg" "$OUT"
+else
+  # Camera busy (some process owns it) — fall back to the vilib MJPEG stream, if running.
+  ADDR="${HOST#*@}"
+  curl -s --max-time 5 "http://${ADDR}:9000/mjpg" -o /tmp/_bubbles-stream.raw
+  python3 - "$OUT" <<'PY'
+import sys
+d = open('/tmp/_bubbles-stream.raw', 'rb').read()
+i = d.find(b'\xff\xd8'); j = d.find(b'\xff\xd9', i)
+if i < 0 or j <= i:
+    sys.exit("camera busy and no MJPEG stream on :9000 — no frame available")
+open(sys.argv[1], 'wb').write(d[i:j+2])
+PY
+fi
+echo "$OUT"

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# EMERGENCY STOP: kill any vendor example scripts, stop motors, center all servos.
+# Run this immediately after killing or timeouting ANY vendor driving example —
+# Python's `finally` does not run on SIGTERM, so their motors can stay pinned.
+set -euo pipefail
+HOST="${PICARX_HOST:-bubbles@bubbles.local}"
+
+# Pattern matches vendor example filenames ("4.avoiding_obstacles.py" etc.) but can
+# never match this command's own cmdline — a naive "picar-x/example" pattern matches
+# the ssh session itself and pkill kills its own shell (learned empirically).
+ssh "$HOST" '
+sudo -n pkill -f "[0-9]+[.][a-z_]+[.]py" 2>/dev/null || true
+sleep 0.3
+python3 - <<PY
+from picarx import Picarx
+Picarx().reset()
+print("motors stopped, servos centered")
+PY'

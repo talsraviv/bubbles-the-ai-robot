@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Follow the nearest face with the camera for SECS seconds (default 15, max 60).
+# This process owns the camera while it runs (snap falls back to the :9000 stream,
+# which this conveniently serves — watch live at http://<host>:9000/mjpg).
+# Prints how often a face was seen and the final camera aim (pan > 0 = face is to
+# the robot's right — useful for deciding which way to drive next).
+set -euo pipefail
+HOST="${PICARX_HOST:-bubbles@bubbles.local}"
+SECS="${1:-15}"
+[[ "$SECS" =~ ^[0-9]+(\.[0-9]+)?$ ]] || { echo "SECS must be a positive number" >&2; exit 1; }
+
+ssh "$HOST" "SECS=$SECS python3 - <<'PY'
+import os, time
+from picarx import Picarx
+from vilib import Vilib
+
+secs = min(60.0, float(os.environ['SECS']))
+px = Picarx()
+Vilib.camera_start()
+Vilib.display(local=False, web=True)   # live view at :9000/mjpg while following
+Vilib.face_detect_switch(True)
+time.sleep(1)                          # camera warm-up
+
+# Start looking UP: this robot is ankle-height, so a level gaze sees only legs and
+# the tracker never acquires a face to begin following. 25 deg ~= a nearby human.
+pan, tilt = 0.0, 25.0
+px.set_cam_pan_angle(0)
+px.set_cam_tilt_angle(25)
+seen = polls = 0
+t0 = time.time()
+try:
+    while time.time() - t0 < secs:
+        polls += 1
+        if Vilib.detect_obj_parameter['human_n'] != 0:
+            seen += 1
+            # vendor's proportional step (8.stare_at_you.py): max 5 deg/tick, coords 640x480
+            pan  += (Vilib.detect_obj_parameter['human_x'] * 10 / 640) - 5
+            tilt -= (Vilib.detect_obj_parameter['human_y'] * 10 / 480) - 5
+            # wider than the vendor's +/-35: from ankle height, faces live UP.
+            # tilt hardware max is 65; empirically 35 cannot reach a nearby standing human.
+            pan  = max(-60.0, min(60.0, pan))
+            tilt = max(-15.0, min(60.0, tilt))
+            px.set_cam_pan_angle(int(pan))
+            px.set_cam_tilt_angle(int(tilt))
+        time.sleep(0.05)
+finally:
+    Vilib.face_detect_switch(False)
+    Vilib.camera_close()
+    px.stop()
+
+pct = round(100 * seen / max(1, polls))
+print(f'followed for {secs:.0f}s: face visible {pct}% of polls; final aim pan={int(pan)} tilt={int(tilt)}')
+PY"

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Ultrasonic range in cm. Prints -1 if no echo (out of range / soft surface).
+set -euo pipefail
+HOST="${PICARX_HOST:-bubbles@bubbles.local}"
+
+ssh "$HOST" "python3 - <<'PY'
+import time
+from picarx import Picarx
+
+px = Picarx()
+for _ in range(5):
+    d = px.get_distance()
+    if d and d > 0:
+        print(round(d, 1))
+        break
+    time.sleep(0.06)
+else:
+    print(-1)
+PY"
