@@ -33,13 +33,13 @@ Clone this repo, then tell your harness about it:
 **Claude Code**
 
 ```bash
-ln -s "$(pwd)" ~/.claude/skills/picarx
+ln -s "$(pwd)" ~/.claude/skills/bubbles-the-ai-robot
 ```
 
 **Codex, Antigravity, or anything else** — add one line to your `AGENTS.md`:
 
 ```
-For anything involving the robot, first read picarx-skill/SKILL.md and follow it.
+For anything involving the robot, first read bubbles-the-ai-robot/SKILL.md and follow it.
 ```
 
 If your robot isn't named `bubbles` (ours is), point the scripts at yours:
@@ -50,7 +50,7 @@ export PICARX_HOST=your-user@your-pi.local
 
 ## Play
 
-Open a thread in your agent, type `/picarx` with nothing else, and approve the commands
+Open a thread in your agent, type `/bubbles-the-ai-robot` with nothing else, and approve the commands
 it proposes. The skill tells the agent to wake the robot, health-check it, troubleshoot
 it if it's asleep, find you, and report for duty — in character.
 

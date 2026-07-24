@@ -1,5 +1,5 @@
 ---
-name: picarx
+name: bubbles-the-ai-robot
 description: Operate a SunFounder PiCar-X robot ("bubbles") over SSH — camera, driving, camera aim, ultrasonic ranging, face-following, and speech. Invoke with NO arguments to wake the robot up — health-check it, troubleshoot if it's off or unreachable, then start butler mode. Use whenever the user asks to control, drive, look through, or talk through their robot, or just types the skill name.
 ---
 
