@@ -12,8 +12,7 @@ with a personality: a persistent, lightly snarky butler that physically hunts yo
 to deliver a message, and addresses the empty room only as a last resort.
 
 On day one, mine read an unread inbox over Gmail, chased me across the room,
-negotiated with my foot over a 50-centimeter delivery clause, and read the mail aloud from
-point-blank range. Yours will do something different. That's the point.
+negotiated with my foot over a 50-centimeter delivery clause, and told me when my next flight was.
 
 <p align="center">
   <img src="media/day-one.jpg" width="380" alt="bubbles front and center on the living-room floor, LEDs lit, its human sitting cross-legged behind it, listening">
@@ -104,7 +103,7 @@ daily field notes about life at ankle height.
 <p align="center">
   <a href="https://bubbles-patrol-test.surge.sh/"><img src="media/patrol-log.png" width="560" alt="The Patrol Log — a web page bubbles wrote and deployed: its own photos from ankle height with butler-voiced field notes under each stop"></a>
   <br>
-  <em>Not hypothetical: a patrol log bubbles wrote and deployed after one tour of the house —
+  <em>A patrol log bubbles wrote and deployed after one tour of the house —
   <a href="https://bubbles-patrol-test.surge.sh/">bubbles-patrol-test.surge.sh</a></em>
 </p>
 
