@@ -11,8 +11,8 @@ its microphone (on-robot speech-to-text — you can talk back) — and it arrive
 with a personality: a persistent, lightly snarky butler that will physically hunt you down
 to deliver a message, and only addresses the empty room as a last resort.
 
-On day one, ours read an unread inbox over Gmail, chased its owner across the room,
-negotiated with a foot over a 50-centimeter delivery clause, and read the mail aloud from
+On day one, mine read an unread inbox over Gmail, chased me across the room,
+negotiated with my foot over a 50-centimeter delivery clause, and read the mail aloud from
 point-blank range. Yours will do something different. That's the point.
 
 ## Getting started
@@ -24,10 +24,10 @@ kit and a Raspberry Pi, and assemble it per the
 [vendor's instructions](https://docs.sunfounder.com/projects/picar-x-v20/en/latest/).
 This is the hands-and-ribbon-cables part — the one thing no agent can do for you.
 
-Two shopping notes we wish the docs made clearer: also buy a **microSD card** and a
+Two shopping notes I wish the docs made clearer: also buy a **microSD card** and a
 **cheap USB microSD reader** — setup means copying a disk image onto the card from your
 laptop. And you do *not* need a monitor, keyboard, or any other peripherals for the Pi;
-everything past assembly happens over Wi-Fi. A Raspberry Pi 4 was plenty for us.
+everything past assembly happens over Wi-Fi. A Raspberry Pi 4 was plenty for me.
 
 **2. Hand the rest to your agent.** When the instructions turn from hardware to
 software, stop following them yourself. Paste this into your coding agent:
@@ -52,7 +52,7 @@ wire it up from there:
 > Clone https://github.com/talsraviv/bubbles-the-ai-robot into my projects folder and
 > symlink it into my skills so I can edit it in place.
 
-If your robot isn't named `bubbles` (ours is), add one sentence to any of these
+If your robot isn't named `bubbles` (mine is), add one sentence to any of these
 prompts — "my robot's SSH address is `your-user@your-pi.local`" — and the agent will
 take care of the rest (`PICARX_HOST`).
 
@@ -78,7 +78,7 @@ Things to say to it (out loud, or typed):
 - Make it a routine: schedule an agent to run the skill every morning and deliver your
   first meeting and headlines to wherever your feet happen to be.
 
-## Ideas we're excited about
+## Ideas I'm excited about
 
 Each of these is literally a prompt you could type into a thread. They work because the
 operator has judgment, your digital life, and a memory — not because the robot got fancier.
@@ -89,7 +89,7 @@ the gym") — and commits a journal entry, in persona, to this repo. A robot pub
 daily field notes about life at ankle height.
 > "Every night at 10, patrol the apartment, compare against your last notes, and commit a journal entry to the repo."
 
-**Let it improve its own body.** Ours discovered its steering overshoot, its sonar's
+**Let it improve its own body.** Mine discovered its steering overshoot, its sonar's
 blindness to ankles, and its camera's resting-gaze bug — all empirically, all now encoded
 in this skill. Close the loop: let it run experiments on itself and commit what it learns.
 > "Tonight, practice until you can reliably stop 30 cm from a wall, then update your own skill with what you learned and commit it."
@@ -123,7 +123,7 @@ handle on the vendor's Python API — read them in five minutes, then add your o
 Your robot also **remembers you** — preferences, promises, what it learns about the
 house — in a `memory/` folder that is gitignored and never leaves your machine. The
 skill is the shared species; the memory is your particular robot's life. (It was born
-from a real moment: our robot's first stored memory is how its owner asked to be
+from a real moment: my robot's first stored memory is how I asked to be
 greeted in the morning, settled entirely by voice.)
 
 The gotchas section of `SKILL.md` is the real treasure: every entry was learned on real
@@ -140,7 +140,7 @@ or have the Pi
 — and that is genuinely cool. But a brain that lives on the robot knows only the robot.
 Keep the harness on your laptop and the robot becomes a body for an agent that also
 carries your inbox, calendar, files, memory, and every connector you've given it — that
-reach is exactly what the [ideas above](#ideas-were-excited-about) run on. This repo is
+reach is exactly what the [ideas above](#ideas-im-excited-about) run on. This repo is
 that choice, written down: the robot stays a beautifully simple set of input and output
 tools, and the intelligence stays wherever your agent lives.
 
