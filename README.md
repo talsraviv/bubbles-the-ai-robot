@@ -53,7 +53,9 @@ export PICARX_HOST=your-user@your-pi.local
 
 Open a thread in your agent, type `/bubbles-the-ai-robot` with nothing else, and approve
 the commands it proposes. The robot checks itself out (troubleshooting itself if needed),
-then **calls you over and starts a spoken conversation** — that's the interface. It
+then **looks for you** — straight ahead first, then sweeping its camera around, and if
+that fails, asking out loud for permission to drive off and scan the room — walks up,
+and **starts a spoken conversation**. That's the interface. It
 explains its own protocol out loud: a rising beep means *your turn to talk*; a low tone
 means *heard you, thinking*. The keyboard still works — as the fallback and for anything
 too long to say — but the main loop is you and a small robot, talking.
