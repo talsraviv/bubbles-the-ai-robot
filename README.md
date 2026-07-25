@@ -101,6 +101,13 @@ daily field notes about life at ankle height.
   <img src="media/patrol.jpg" width="380" alt="the robot alone on the floor, facing a closed white door">
 </p>
 
+<p align="center">
+  <a href="https://bubbles-patrol-test.surge.sh/"><img src="media/patrol-log.png" width="560" alt="The Patrol Log — a web page bubbles wrote and deployed: its own photos from ankle height with butler-voiced field notes under each stop"></a>
+  <br>
+  <em>Not hypothetical: a patrol log bubbles wrote and deployed after one tour of the house —
+  <a href="https://bubbles-patrol-test.surge.sh/">bubbles-patrol-test.surge.sh</a></em>
+</p>
+
 **Let it improve its own body.** Mine discovered its steering overshoot, its sonar's
 blindness to ankles, and its camera's resting-gaze bug — all empirically, all now encoded
 in this skill. Close the loop: let it run experiments on itself and commit what it learns.
