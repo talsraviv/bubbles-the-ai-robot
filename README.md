@@ -29,36 +29,20 @@ When `ssh your-user@your-pi.local` works with no password prompt, you're done wi
 
 ## Install
 
-It's a skill, so it installs like one:
+Paste this into your agent:
 
-**Claude Code**
+> Install https://github.com/talsraviv/bubbles-the-ai-robot as a skill.
 
-```bash
-git clone https://github.com/talsraviv/bubbles-the-ai-robot.git ~/.claude/skills/bubbles-the-ai-robot
-```
+By the way — if you want to keep modifying it and playing with it (you should — see
+[Make it yours](#make-it-yours)), put it somewhere more convenient by cloning the repo.
+Paste this instead:
 
-**Codex, Antigravity, or anything else** — clone it anywhere, then add one line to your
-`AGENTS.md`, with the real path to your clone:
+> Clone https://github.com/talsraviv/bubbles-the-ai-robot into my projects folder and
+> symlink it into my skills so I can edit it in place.
 
-```
-For anything involving the robot, first read /path/to/bubbles-the-ai-robot/SKILL.md and follow it.
-```
-
-Either way the clone is a normal git repo: edit it in place, `git pull` for updates, and
-your robot's `memory/` never leaves your machine.
-
-**Planning to remix it?** (You should — see [Make it yours](#make-it-yours).) Keep the
-repo with your own projects instead, and let your agent do the wiring — paste this:
-
-> Clone https://github.com/talsraviv/bubbles-the-ai-robot into my projects folder, then
-> symlink it into my skills directory so I can edit it in place.
-
-If your robot isn't named `bubbles` (ours is), point the scripts at yours — in your
-shell profile (`~/.zshrc`), so your agent's shells actually inherit it:
-
-```bash
-export PICARX_HOST=your-user@your-pi.local
-```
+If your robot isn't named `bubbles` (ours is), add one sentence to either prompt — "my
+robot's SSH address is `your-user@your-pi.local`" — and the agent will point the scripts
+(`PICARX_HOST`) at it.
 
 ## Play
 
