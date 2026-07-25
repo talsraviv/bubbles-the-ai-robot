@@ -29,21 +29,32 @@ When `ssh your-user@your-pi.local` works with no password prompt, you're done wi
 
 ## Install
 
-Clone this repo, then tell your harness about it:
+It's a skill, so it installs like one:
 
 **Claude Code**
 
 ```bash
-ln -s "$(pwd)" ~/.claude/skills/bubbles-the-ai-robot
+git clone https://github.com/talsraviv/bubbles-the-ai-robot.git ~/.claude/skills/bubbles-the-ai-robot
 ```
 
-**Codex, Antigravity, or anything else** — add one line to your `AGENTS.md`:
+**Codex, Antigravity, or anything else** — clone it anywhere, then add one line to your
+`AGENTS.md`, with the real path to your clone:
 
 ```
-For anything involving the robot, first read bubbles-the-ai-robot/SKILL.md and follow it.
+For anything involving the robot, first read /path/to/bubbles-the-ai-robot/SKILL.md and follow it.
 ```
 
-If your robot isn't named `bubbles` (ours is), point the scripts at yours:
+Either way the clone is a normal git repo: edit it in place, `git pull` for updates, and
+your robot's `memory/` never leaves your machine.
+
+**Planning to remix it?** (You should — see [Make it yours](#make-it-yours).) Keep the
+repo with your own projects instead, and let your agent do the wiring — paste this:
+
+> Clone https://github.com/talsraviv/bubbles-the-ai-robot into my projects folder, then
+> symlink it into my skills directory so I can edit it in place.
+
+If your robot isn't named `bubbles` (ours is), point the scripts at yours — in your
+shell profile (`~/.zshrc`), so your agent's shells actually inherit it:
 
 ```bash
 export PICARX_HOST=your-user@your-pi.local
