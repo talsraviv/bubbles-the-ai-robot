@@ -15,6 +15,12 @@ On day one, mine read an unread inbox over Gmail, chased me across the room,
 negotiated with my foot over a 50-centimeter delivery clause, and read the mail aloud from
 point-blank range. Yours will do something different. That's the point.
 
+<p align="center">
+  <img src="media/day-one.jpg" width="380" alt="bubbles front and center on the living-room floor, LEDs lit, its human sitting cross-legged behind it, listening">
+  <br>
+  <em>Day one.</em>
+</p>
+
 ## Getting started
 
 Four steps; only the first one needs a screwdriver.
@@ -67,6 +73,12 @@ explains its own protocol out loud: a rising beep means *your turn to talk*; a l
 means *heard you, thinking*. The keyboard still works — as the fallback and for anything
 too long to say — but the main loop is you and a small robot, talking.
 
+<p align="center">
+  <img src="media/seek-pov.jpg" width="720" alt="two frames from the robot's camera: flip-flopped feet at a standing desk, then a mirrored closet after panning left">
+  <br>
+  <em>What bubbles saw: me at the desk after a 1.3-meter drive, then my closet after panning left 50°.</em>
+</p>
+
 Things to say to it (out loud, or typed):
 
 - "Chase me around the house and deliver my unread email — only when you're within 50 cm."
@@ -88,6 +100,12 @@ its own last notes — semantically, not pixels ("the suitcase is gone; someone 
 the gym") — and commits a journal entry, in persona, to this repo. A robot publishing
 daily field notes about life at ankle height.
 > "Every night at 10, patrol the apartment, compare against your last notes, and commit a journal entry to the repo."
+
+<p align="center">
+  <img src="media/patrol.jpg" width="380" alt="the robot alone on the floor, facing a closed white door">
+  <br>
+  <em>On patrol. A closed door is a finding.</em>
+</p>
 
 **Let it improve its own body.** Mine discovered its steering overshoot, its sonar's
 blindness to ankles, and its camera's resting-gaze bug — all empirically, all now encoded
@@ -125,6 +143,12 @@ house — in a `memory/` folder that is gitignored and never leaves your machine
 skill is the shared species; the memory is your particular robot's life. (It was born
 from a real moment: my robot's first stored memory is how I asked to be
 greeted in the morning, settled entirely by voice.)
+
+<p align="center">
+  <img src="media/greeting.jpg" width="380" alt="its human sitting cross-legged on the floor, chin in hand, considering the small robot in front of them">
+  <br>
+  <em>Settling the morning greeting.</em>
+</p>
 
 The gotchas section of `SKILL.md` is the real treasure: every entry was learned on real
 hardware — the amp that's silently gated behind a GPIO, the sound route that hijacks

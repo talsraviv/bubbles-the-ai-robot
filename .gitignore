@@ -4,3 +4,6 @@
 *.png
 memory/
 docs/superpowers/
+
+# committed README images are the one exception to the image ban
+!media/*.jpg
