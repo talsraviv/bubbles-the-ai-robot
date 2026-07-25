@@ -24,6 +24,11 @@ kit and a Raspberry Pi, and assemble it per the
 [vendor's instructions](https://docs.sunfounder.com/projects/picar-x-v20/en/latest/).
 This is the hands-and-ribbon-cables part — the one thing no agent can do for you.
 
+Two shopping notes we wish the docs made clearer: also buy a **microSD card** and a
+**cheap USB microSD reader** — setup means copying a disk image onto the card from your
+laptop. And you do *not* need a monitor, keyboard, or any other peripherals for the Pi;
+everything past assembly happens over Wi-Fi. A Raspberry Pi 4 was plenty for us.
+
 **2. Hand the rest to your agent.** When the instructions turn from hardware to
 software, stop following them yourself. Paste this into your coding agent:
 
@@ -125,6 +130,19 @@ The gotchas section of `SKILL.md` is the real treasure: every entry was learned 
 hardware — the amp that's silently gated behind a GPIO, the sound route that hijacks
 itself, the sonar that can't see ankles. Trust it over the tutorials, and send back what
 your robot teaches you.
+
+## Where the brain lives
+
+SunFounder ships AI integrations of its own — you can run
+[Ollama right on the robot](https://docs.sunfounder.com/projects/picar-x-v20/en/latest/ai_interaction/python_text_vision_talk.html#before-you-start),
+or have the Pi
+[call online LLMs directly with an API key](https://docs.sunfounder.com/projects/picar-x-v20/en/latest/ai_interaction/python_online_llms.html#before-you-start)
+— and that is genuinely cool. But a brain that lives on the robot knows only the robot.
+Keep the harness on your laptop and the robot becomes a body for an agent that also
+carries your inbox, calendar, files, memory, and every connector you've given it — that
+reach is exactly what the [ideas above](#ideas-were-excited-about) run on. This repo is
+that choice, written down: the robot stays a beautifully simple set of input and output
+tools, and the intelligence stays wherever your agent lives.
 
 ## Safety model
 
