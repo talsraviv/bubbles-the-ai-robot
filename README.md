@@ -17,8 +17,6 @@ point-blank range. Yours will do something different. That's the point.
 
 <p align="center">
   <img src="media/day-one.jpg" width="380" alt="bubbles front and center on the living-room floor, LEDs lit, its human sitting cross-legged behind it, listening">
-  <br>
-  <em>Day one.</em>
 </p>
 
 ## Getting started
@@ -75,8 +73,6 @@ too long to say — but the main loop is you and a small robot, talking.
 
 <p align="center">
   <img src="media/seek-pov.jpg" width="720" alt="two frames from the robot's camera: flip-flopped feet at a standing desk, then a mirrored closet after panning left">
-  <br>
-  <em>What bubbles saw: me at the desk after a 1.3-meter drive, then my closet after panning left 50°.</em>
 </p>
 
 Things to say to it (out loud, or typed):
@@ -103,8 +99,6 @@ daily field notes about life at ankle height.
 
 <p align="center">
   <img src="media/patrol.jpg" width="380" alt="the robot alone on the floor, facing a closed white door">
-  <br>
-  <em>On patrol. A closed door is a finding.</em>
 </p>
 
 **Let it improve its own body.** Mine discovered its steering overshoot, its sonar's
@@ -146,8 +140,6 @@ greeted in the morning, settled entirely by voice.)
 
 <p align="center">
   <img src="media/greeting.jpg" width="380" alt="its human sitting cross-legged on the floor, chin in hand, considering the small robot in front of them">
-  <br>
-  <em>Settling the morning greeting.</em>
 </p>
 
 The gotchas section of `SKILL.md` is the real treasure: every entry was learned on real
