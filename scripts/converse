@@ -1,19 +1,48 @@
 #!/usr/bin/env bash
 # One full conversation turn through the robot — the skill's PRIMARY interface.
 # Speaks TEXT, plays the your-turn beep (bright rising pair), records the human
-# for LISTEN_SECS, plays the processing cue (single low tone), prints transcript.
+# until they stop talking (2 s of silence ends the recording; MAX_SECS caps the
+# wait), plays the processing cue (single low tone), prints the transcript.
 # stdout = what the human said, or "(nothing intelligible)".
-# Usage: converse "text to say" [LISTEN_SECS]   (default 8, max 30)
+#
+# Transcription runs on THIS machine via whisper.cpp when available (far more
+# accurate and ~5x faster than the robot's CPU); otherwise falls back to vosk
+# on the robot. Setup for the good path:  brew install whisper-cpp  and drop a
+# model at ~/.cache/whisper-cpp/ggml-small.en.bin (or set BUBBLES_WHISPER_MODEL).
+# Set BUBBLES_STT=pi to force the on-robot fallback (mainly for testing).
+#
+# Usage: converse "text to say" [MAX_SECS]   (default 20, max 90)
 set -euo pipefail
 HOST="${PICARX_HOST:-bubbles@bubbles.local}"
-TEXT="${1:?usage: converse \"text to say\" [listen_secs]}"
-SECS="${2:-8}"
-[[ "$SECS" =~ ^[0-9]+$ ]] || { echo "SECS must be an integer" >&2; exit 1; }
-(( SECS <= 30 )) || SECS=30
+TEXT="${1:?usage: converse \"text to say\" [max_secs]}"
+SECS="${2:-20}"
+[[ "$SECS" =~ ^[0-9]+$ ]] || { echo "MAX_SECS must be an integer" >&2; exit 1; }
+(( SECS <= 90 )) || SECS=90
 B64=$(printf '%s' "$TEXT" | base64 | tr -d '\n')
 
-ssh "$HOST" "T_B64='$B64' SECS=$SECS bash -s" <<'REMOTE'
+# Prefer transcribing here on the laptop (whisper.cpp); fall back to on-robot vosk.
+MODE=pi WBIN="" WMODEL=""
+if [ "${BUBBLES_STT:-}" != "pi" ]; then
+  WBIN=$(command -v whisper-cli || true)
+  WMODEL="${BUBBLES_WHISPER_MODEL:-}"
+  if [ -z "$WMODEL" ]; then
+    for m in "$HOME/.cache/whisper-cpp/ggml-small.en.bin" \
+             "$HOME/.cache/whisper-cpp/ggml-base.en.bin" \
+             "$HOME/.cache/whisper-cpp"/ggml-*.bin; do
+      [ -f "$m" ] && WMODEL="$m" && break
+    done
+  fi
+  [ -n "$WBIN" ] && [ -f "$WMODEL" ] && MODE=local
+fi
+
+# The remote side puts ALL chatter on stderr; stdout carries only the result —
+# the transcript (pi mode) or the raw recorded WAV (local mode).
+HEARD=$(mktemp "${TMPDIR:-/tmp}/bubbles-heard.XXXXXX")
+trap 'rm -f "$HEARD"' EXIT
+
+ssh "$HOST" "T_B64='$B64' SECS=$SECS MODE=$MODE bash -s" > "$HEARD" <<'REMOTE'
 set -u
+exec 3>&1 1>&2          # fd3 = the result channel; everything else goes to stderr
 TEXT=$(printf '%s' "$T_B64" | base64 -d)
 python3 -c "from robot_hat import device; device.enable_speaker()" 2>/dev/null
 CARD=$(aplay -l | sed -n 's/^card \([0-9]*\).*sndrpihifiberry.*/\1/p' | head -1)
@@ -21,19 +50,43 @@ CARD=$(aplay -l | sed -n 's/^card \([0-9]*\).*sndrpihifiberry.*/\1/p' | head -1)
 MIC=$(arecord -l | sed -n 's/^card \([0-9]*\).*USB.*/\1/p' | head -1)
 [ -z "$MIC" ] && { echo "ERROR: USB microphone not found — fall back to text chat"; exit 1; }
 
+# Audio cues, rendered once per boot (/dev/shm) instead of three sox spawns per turn.
+CUE_UP=/dev/shm/_cue_up.wav CUE_LOW=/dev/shm/_cue_low.wav
+if [ ! -f "$CUE_UP" ] || [ ! -f "$CUE_LOW" ]; then
+  sox -n -r 22050 /dev/shm/_b1.wav synth 0.12 sine 880 vol 0.6 pad 0 0.05
+  sox -n -r 22050 /dev/shm/_b2.wav synth 0.15 sine 1320 vol 0.6
+  sox /dev/shm/_b1.wav /dev/shm/_b2.wav "$CUE_UP"
+  sox -n -r 22050 "$CUE_LOW" synth 0.18 sine 440 vol 0.45
+  rm -f /dev/shm/_b1.wav /dev/shm/_b2.wav
+fi
+
 COMP="compand 0.02,0.20 -50,-12,-30,-6,-20,-4,-10,-2,0,-1 0 -90 0.05"
 pico2wave -w /dev/shm/_c.wav "$TEXT" && play -q /dev/shm/_c.wav $COMP norm -0.5 2>/dev/null
+play -q "$CUE_UP" 2>/dev/null    # bright rising pair = "I'm listening, speak now"
 
-# Your-turn beep: bright rising pair = "I'm listening, speak now"
-play -qn synth 0.12 sine 880 vol 0.6 2>/dev/null
-play -qn synth 0.15 sine 1320 vol 0.6 2>/dev/null
+# Record until the speaker pauses: sox starts on sound (>3% for 0.15 s) and stops
+# after 2.0 s of silence. `timeout` caps the whole wait; raw output (no header)
+# stays valid even if the cap kills sox mid-write. AUDIODRIVER must be explicit
+# (PipeWire confuses sox's default) and the mic runs at 44.1 kHz, so resample.
+rm -f /dev/shm/_heard.raw
+AUDIODRIVER=alsa AUDIODEV="plughw:${MIC},0" timeout "$SECS" \
+  rec -q -t raw -r 16000 -e signed -b 16 -c 1 /dev/shm/_heard.raw \
+  silence 1 0.15 3% 1 2.0 3% rate 16000 2>/dev/null || true
 
-arecord -q -D "plughw:${MIC},0" -f S16_LE -r 16000 -c 1 -d "$SECS" /dev/shm/_heard.wav
+play -q "$CUE_LOW" 2>/dev/null   # single low tone = "got it, thinking"
 
-# Processing cue: single low tone = "got it, thinking"
-play -qn synth 0.18 sine 440 vol 0.45 2>/dev/null
-
-python3 - <<'PY' 2>/dev/null
+if [ -s /dev/shm/_heard.raw ]; then
+  python3 - <<'PY'
+import wave
+raw = open('/dev/shm/_heard.raw', 'rb').read()
+w = wave.open('/dev/shm/_heard.wav', 'wb')
+w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000)
+w.writeframes(raw); w.close()
+PY
+  if [ "$MODE" = local ]; then
+    cat /dev/shm/_heard.wav >&3      # ship the audio home; laptop transcribes
+  else
+    python3 - >&3 <<'PY' 2>/dev/null
 import wave, json
 from vosk import Model, KaldiRecognizer
 m = Model(lang="en-us")
@@ -47,5 +100,25 @@ while True:
 text = json.loads(rec.FinalResult())["text"]
 print(text if text else "(nothing intelligible)")
 PY
-rm -f /dev/shm/_c.wav /dev/shm/_heard.wav
+  fi
+elif [ "$MODE" != local ]; then
+  echo "(nothing intelligible)" >&3   # local mode signals this with empty output
+fi
+rm -f /dev/shm/_c.wav /dev/shm/_heard.raw /dev/shm/_heard.wav
 REMOTE
+
+if [ "$MODE" = local ]; then
+  # Under ~0.4 s of audio (or none at all) isn't speech.
+  SIZE=$(stat -f%z "$HEARD" 2>/dev/null || stat -c%s "$HEARD" 2>/dev/null || echo 0)
+  if [ "$SIZE" -lt 14000 ]; then
+    echo "(nothing intelligible)"
+  else
+    # Strip whisper's noise annotations like [BLANK_AUDIO] or (coughing).
+    TXT=$("$WBIN" -m "$WMODEL" -f "$HEARD" -nt -np 2>/dev/null \
+          | sed -e 's/\[[^][]*\]//g' -e 's/([^()]*)//g' \
+          | tr -s ' \n\t' '   ' | sed -e 's/^ *//' -e 's/ *$//')
+    echo "${TXT:-(nothing intelligible)}"
+  fi
+else
+  cat "$HEARD"
+fi

@@ -1,24 +1,75 @@
 #!/usr/bin/env bash
-# Listen through the robot's USB microphone for SECS seconds (default 5, max 30),
-# then print what was heard as text (on-robot vosk transcription, ~40 MB model
-# auto-downloads to ~/.cache/vosk on first use).
-# Combine with `say` for out-loud conversation: say -> listen -> think -> say.
+# Listen through the robot's USB microphone and print what was heard as text.
+# Recording starts when someone speaks and ends 2 s after they stop; MAX_SECS
+# caps the total wait (default 10, max 90). No spoken cues — for
+# eavesdropping-with-consent moments; prefer `converse` for dialogue.
+#
+# Transcription runs on THIS machine via whisper.cpp when available (far more
+# accurate and ~5x faster than the robot's CPU); otherwise falls back to vosk
+# on the robot (~40 MB model auto-downloads to ~/.cache/vosk on first use).
+# Setup for the good path:  brew install whisper-cpp  and drop a model at
+# ~/.cache/whisper-cpp/ggml-small.en.bin (or set BUBBLES_WHISPER_MODEL).
+# Set BUBBLES_STT=pi to force the on-robot fallback (mainly for testing).
+#
+# Usage: listen [MAX_SECS]
 set -euo pipefail
 HOST="${PICARX_HOST:-bubbles@bubbles.local}"
-SECS="${1:-5}"
-[[ "$SECS" =~ ^[0-9]+$ ]] || { echo "SECS must be an integer" >&2; exit 1; }
-(( SECS <= 30 )) || SECS=30
+SECS="${1:-10}"
+[[ "$SECS" =~ ^[0-9]+$ ]] || { echo "MAX_SECS must be an integer" >&2; exit 1; }
+(( SECS <= 90 )) || SECS=90
 
-ssh "$HOST" "SECS=$SECS bash -s" <<'REMOTE'
+# Prefer transcribing here on the laptop (whisper.cpp); fall back to on-robot vosk.
+MODE=pi WBIN="" WMODEL=""
+if [ "${BUBBLES_STT:-}" != "pi" ]; then
+  WBIN=$(command -v whisper-cli || true)
+  WMODEL="${BUBBLES_WHISPER_MODEL:-}"
+  if [ -z "$WMODEL" ]; then
+    for m in "$HOME/.cache/whisper-cpp/ggml-small.en.bin" \
+             "$HOME/.cache/whisper-cpp/ggml-base.en.bin" \
+             "$HOME/.cache/whisper-cpp"/ggml-*.bin; do
+      [ -f "$m" ] && WMODEL="$m" && break
+    done
+  fi
+  [ -n "$WBIN" ] && [ -f "$WMODEL" ] && MODE=local
+fi
+
+# The remote side puts ALL chatter on stderr; stdout carries only the result —
+# the transcript (pi mode) or the raw recorded WAV (local mode).
+HEARD=$(mktemp "${TMPDIR:-/tmp}/bubbles-heard.XXXXXX")
+trap 'rm -f "$HEARD"' EXIT
+
+ssh "$HOST" "SECS=$SECS MODE=$MODE bash -s" > "$HEARD" <<'REMOTE'
+set -u
+exec 3>&1 1>&2          # fd3 = the result channel; everything else goes to stderr
 # The USB card index moves between reboots — look it up, never hardcode it.
-CARD=$(arecord -l | sed -n 's/^card \([0-9]*\).*USB.*/\1/p' | head -1)
-[ -z "$CARD" ] && { echo "ERROR: USB microphone not found (check arecord -l)"; exit 1; }
-arecord -q -D "plughw:${CARD},0" -f S16_LE -r 16000 -c 1 -d "$SECS" /dev/shm/_listen.wav
-python3 - <<'PY' 2>/dev/null
+MIC=$(arecord -l | sed -n 's/^card \([0-9]*\).*USB.*/\1/p' | head -1)
+[ -z "$MIC" ] && { echo "ERROR: USB microphone not found (check arecord -l)"; exit 1; }
+
+# Record until the speaker pauses: sox starts on sound (>3% for 0.15 s) and stops
+# after 2.0 s of silence. `timeout` caps the whole wait; raw output (no header)
+# stays valid even if the cap kills sox mid-write. AUDIODRIVER must be explicit
+# (PipeWire confuses sox's default) and the mic runs at 44.1 kHz, so resample.
+rm -f /dev/shm/_heard.raw
+AUDIODRIVER=alsa AUDIODEV="plughw:${MIC},0" timeout "$SECS" \
+  rec -q -t raw -r 16000 -e signed -b 16 -c 1 /dev/shm/_heard.raw \
+  silence 1 0.15 3% 1 2.0 3% rate 16000 2>/dev/null || true
+
+if [ -s /dev/shm/_heard.raw ]; then
+  python3 - <<'PY'
+import wave
+raw = open('/dev/shm/_heard.raw', 'rb').read()
+w = wave.open('/dev/shm/_heard.wav', 'wb')
+w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000)
+w.writeframes(raw); w.close()
+PY
+  if [ "$MODE" = local ]; then
+    cat /dev/shm/_heard.wav >&3      # ship the audio home; laptop transcribes
+  else
+    python3 - >&3 <<'PY' 2>/dev/null
 import wave, json
 from vosk import Model, KaldiRecognizer
 m = Model(lang="en-us")
-wf = wave.open("/dev/shm/_listen.wav", "rb")
+wf = wave.open("/dev/shm/_heard.wav", "rb")
 rec = KaldiRecognizer(m, wf.getframerate())
 while True:
     data = wf.readframes(4000)
@@ -28,5 +79,25 @@ while True:
 text = json.loads(rec.FinalResult())["text"]
 print(text if text else "(nothing intelligible)")
 PY
-rm -f /dev/shm/_listen.wav
+  fi
+elif [ "$MODE" != local ]; then
+  echo "(nothing intelligible)" >&3   # local mode signals this with empty output
+fi
+rm -f /dev/shm/_heard.raw /dev/shm/_heard.wav
 REMOTE
+
+if [ "$MODE" = local ]; then
+  # Under ~0.4 s of audio (or none at all) isn't speech.
+  SIZE=$(stat -f%z "$HEARD" 2>/dev/null || stat -c%s "$HEARD" 2>/dev/null || echo 0)
+  if [ "$SIZE" -lt 14000 ]; then
+    echo "(nothing intelligible)"
+  else
+    # Strip whisper's noise annotations like [BLANK_AUDIO] or (coughing).
+    TXT=$("$WBIN" -m "$WMODEL" -f "$HEARD" -nt -np 2>/dev/null \
+          | sed -e 's/\[[^][]*\]//g' -e 's/([^()]*)//g' \
+          | tr -s ' \n\t' '   ' | sed -e 's/^ *//' -e 's/ *$//')
+    echo "${TXT:-(nothing intelligible)}"
+  fi
+else
+  cat "$HEARD"
+fi

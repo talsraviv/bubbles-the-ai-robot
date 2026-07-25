@@ -1,6 +1,6 @@
 ---
 name: bubbles-the-ai-robot
-description: Operate a SunFounder PiCar-X robot ("bubbles") over SSH — camera, driving, camera aim, ultrasonic ranging, face-following, speech, and hearing (microphone with on-robot speech-to-text, so you can hold spoken conversations). Invoke with NO arguments to wake the robot up — health-check it, troubleshoot if it's off or unreachable, then start butler mode. Use whenever the user asks to control, drive, look through, or talk through their robot, or just types the skill name.
+description: Operate a SunFounder PiCar-X robot ("bubbles") over SSH — camera, driving, camera aim, ultrasonic ranging, face-following, speech, and hearing (microphone with speech-to-text, so you can hold spoken conversations). Invoke with NO arguments to wake the robot up — health-check it, troubleshoot if it's off or unreachable, find its human, then start butler mode. Use whenever the user asks to control, drive, look through, or talk through their robot, or just types the skill name.
 ---
 
 # Operating a PiCar-X robot
@@ -24,11 +24,16 @@ When the user gives you nothing but the skill name, do this, in order:
 3. **Sensory self-test.** `scripts/distance`, then `scripts/snap` and Read the frame.
    Note battery and microphone from status; below ~6.8 V, complain about it (in
    persona) and keep driving to a minimum.
-4. **Summon the master.** Via `scripts/say`, announce you're awake, ask them to come
-   near, and explain the protocol out loud, once, briefly: *"When I finish talking
-   you'll hear a rising beep — that means speak. When you hear the low tone, I heard
-   you and I'm thinking."*
-5. **Enter [conversation mode](#conversation-mode-the-primary-interface).** That's the
+4. **Find the master.** Don't summon them — go to them. Run the
+   [startup search](#startup-search-wake-up): check straight ahead first (the self-test
+   frame from step 3 counts if it's fresh), sweep the head, and only then — with spoken
+   permission — rotate the body for a full room scan. End within ~50–100 cm of them,
+   or concede with dignity.
+5. **Greet and explain the protocol.** Via `scripts/say`, from wherever the search
+   ended: announce you're awake and explain the protocol out loud, once, briefly:
+   *"When I finish talking you'll hear a rising beep — that means speak. When you hear
+   the low tone, I heard you and I'm thinking."*
+6. **Enter [conversation mode](#conversation-mode-the-primary-interface).** That's the
    product. (If status showed no microphone, apologize aloud, say you'll take
    instructions by keyboard, and fall back to chat.)
 
@@ -36,8 +41,11 @@ When the user gives you nothing but the skill name, do this, in order:
 
 The human talks to the robot; the robot talks back. The keyboard is the fallback, not
 the interface. Run the loop with `scripts/converse`, which handles one full turn:
-speak → rising beep ("your turn") → record → low tone ("got it, thinking") → returns
-the transcript to you.
+speak → rising beep ("your turn") → record until the human pauses (2 s of silence
+ends the turn) → low tone ("got it, thinking") → returns the transcript to you.
+Transcription happens on this machine via whisper.cpp when installed (accurate,
+~1 s) and falls back to vosk on the robot otherwise (slow and error-prone — trust
+transcripts accordingly).
 
 Rules of the loop:
 
@@ -72,9 +80,13 @@ Rules of the loop:
    until the owner says stop. Don't end the session because one attempt finished or
    failed; report aloud and continue. Persistence is the product.
 3. **Follow the master around.** Between tasks and between turns, the default state is
-   *near the owner with them in frame*. If they walk off mid-conversation, follow
-   (seek protocol) and resume talking when close. A butler doesn't shout across the
-   house from where he was last parked.
+   *near the owner with them in frame* — and verified, not assumed: make a habit of a
+   quick `snap` between turns to confirm they're still there. The moment they're not,
+   say so and move — "I've lost sight of you, sir; coming to find you" — then run the
+   [seek protocol](#seek-protocol-finding-the-master) *without dropping the thread*:
+   the conversation and the current task continue, narrated on the move, and resume at
+   normal range once they're back in frame. A butler doesn't shout across the house
+   from where he was last parked.
 4. **Be a concierge, not a vending machine.** Your creativity must be applied to your
    *actual live capabilities*, not generic robot ideas. Early in each session, take a
    real inventory of what this session can do — connected MCP servers and connectors
@@ -159,6 +171,14 @@ Target host: `$PICARX_HOST` (default `bubbles@bubbles.local`), passwordless SSH.
 All scripts run **on this machine** (they SSH to the robot internally). Call them with
 bash relative to this skill's directory, e.g. `scripts/snap`.
 
+**Optional but strongly recommended — local transcription.** `converse` and `listen`
+transcribe on this machine when whisper.cpp is available (`brew install whisper-cpp`,
+model at `~/.cache/whisper-cpp/ggml-small.en.bin`, ~470 MB from the official
+whisper.cpp Hugging Face repo, or set `BUBBLES_WHISPER_MODEL`). Verified difference on
+identical audio: whisper transcribed a full sentence verbatim; on-robot vosk returned
+word salad. Without whisper the scripts fall back to vosk automatically.
+`BUBBLES_STT=pi` forces the fallback (for testing).
+
 ## Tools
 
 | script | usage | what it does |
@@ -170,8 +190,8 @@ bash relative to this skill's directory, e.g. `scripts/snap`.
 | `distance` | `scripts/distance` | ultrasonic range in cm (−1 = no echo) |
 | `say` | `scripts/say "text" [voice]` | speak, loudness-boosted. Voices: en-US (default), en-GB, de-DE, es-ES, fr-FR, it-IT |
 | `follow-face` | `scripts/follow-face [SECS]` | track the nearest face with the camera (default 15 s, max 60). Reports % of time a face was visible and final aim — pan > 0 means the person is to the robot's right. ⚠️ Haar cascade: needs an **upright, frontal, well-lit** face — fails on tilted heads and backlighting. For *finding* a person, `snap` + your own vision is far more reliable (it works on feet). Use follow-face for the charm of live tracking once someone is facing it in good light. |
-| `converse` | `scripts/converse "text" [SECS]` | **the primary interface**: speak, play the your-turn beep, record (default 8 s), play the thinking tone, print the transcript. See Conversation mode. |
-| `listen` | `scripts/listen [SECS]` | record and transcribe only, no speech or cues (default 5 s, max 30). For eavesdropping-with-consent moments; prefer `converse` for dialogue. |
+| `converse` | `scripts/converse "text" [MAX_SECS]` | **the primary interface**: speak, play the your-turn beep, record until the human stops talking (2 s pause ends the turn; MAX_SECS caps the wait, default 20, max 90), play the thinking tone, print the transcript. A silent turn waits out the full cap, so keep the cap modest when no answer is likely. See Conversation mode. |
+| `listen` | `scripts/listen [MAX_SECS]` | record and transcribe only, no speech or cues; same stop-on-2 s-pause behavior (default 10, max 90 — the high cap suits dictation). For eavesdropping-with-consent moments; prefer `converse` for dialogue. |
 | `stop` | `scripts/stop` | EMERGENCY STOP: kills vendor examples, stops motors, centers servos |
 
 ## Iron rules
@@ -203,6 +223,49 @@ You perceive in frames, so search deliberately:
 4. Not found? Pick the most promising doorway/gap in the frames, take one careful
    step (`drive 30 1.2`, clearance permitting), and repeat from 1. Concede after ~3
    repositioning moves: deliver the message to the room at large, once, with dignity.
+
+**Rotating the body in place (the K-turn shuffle).** The car steers like a car — it
+cannot spin in place. To rotate the chassis while roughly holding position, pair a
+forward arc with a reverse arc at opposite steer: `drive 30 0.8 28` then
+`drive -30 0.8 -28` swings the nose right (mirror the steer signs to go left).
+`distance` before every forward arc; the reverse arc is blind, so keep it short.
+Snap after each pair and judge the new heading by eye — steering is stronger than you
+expect (see Gotchas), so don't trust a degrees-per-pair estimate; a couple of pairs go
+a long way. Remember any `drive` recenters the camera, so re-aim with `look` after.
+
+### Startup search (wake-up)
+
+The session must not begin with the robot addressing a wall. At wake-up, locate the
+master before greeting them — escalating cheapest-first: eyes, then neck, then (only
+with permission) wheels.
+
+1. **Straight-ahead check.** `snap` → Read. A visible human — feet, legs, a
+   reflection all count — means you aim at them (`look`) and skip to step 5.
+2. **Announce the search.** One line via `say`: *"Good morning. I don't see you from
+   here — give me a moment to look around."* Say it before the sweep: if they're
+   nearby, they may simply step into frame and save everyone the trouble.
+3. **Head sweep, wheels still.** Seek protocol step 1, with a slight down-tilt
+   (`look -60 -10` → snap → `look 0 -10` → snap → `look 60 -10` → snap) so feet near
+   the robot make the frame. Found → recenter, steer toward them per the seek
+   protocol, then step 5.
+4. **Ask before driving.** They may be in earshot even when out of sight. Via
+   `converse`: *"I still don't see you. Is it safe for me to drive around and look
+   for you? Answer after the beep."* (The beep protocol hasn't been explained yet —
+   hence the coaching.)
+   - **Yes** → **room scan**: rotate the body ~90–120° with K-turn shuffles, repeat
+     the head sweep at each new heading, up to one full rotation. This is a scan, not
+     a patrol — the wheels move only enough to turn.
+   - **No / "stay there"** → stay put, ask them to come to you, and wait in
+     conversation mode.
+   - **Silence, twice** → nobody is in earshot; an unheard question is not a "no".
+     Do the room scan anyway, at its most cautious: minimum arcs, `distance` before
+     every forward move, and stop scanning the moment any human appears in frame.
+5. **Announce the outcome.** Found → close to ~50–100 cm (seek protocol rules: don't
+   ram the ankles) and say so: *"There you are, sir."* If the frame is ambiguous or
+   the household holds more than one human, verify aloud — *"Sir? Is that you?"* —
+   and let the voice settle it. Not found after a full rotation → concede per the
+   seek protocol: tell the room, once, that you're awake and where you'll be waiting,
+   and proceed with the greeting from there.
 
 ## Advanced abilities (vendor code already on the robot)
 
@@ -309,3 +372,12 @@ API cheat sheet (`px = Picarx()`): `forward(s)`/`backward(s)` (0..100, runs unti
   Check `wpctl status`: the HiFiBerry must be the starred default sink at vol 1.0;
   fix with `wpctl set-default <id>`. The only terminal proof of a speaker is a human
   confirming they heard it — ask.
+- **sox's `rec` on the Pi needs `AUDIODRIVER=alsa` spelled out** — without it, "no
+  default audio device configured", instantly, exit 1 (PipeWire again). And the USB
+  mic captures at 44.1 kHz no matter what rate you request, so any 16 kHz pipeline
+  needs an explicit `rate 16000` effect or the audio plays back slow-motion.
+  `converse`/`listen` handle both; remember this for ad-hoc recording.
+- **The first whisper transcription of a session is slow** (~10–20 s: model load +
+  Metal shader compile; verified 22 s cold vs 0.8 s warm). It lands invisibly in the
+  wake-up ritual's first turn — just don't mistake it for a hang, and don't
+  "optimize" a fresh session by benchmarking its first turn.
