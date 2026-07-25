@@ -2,14 +2,14 @@
 
 **Give a real robot to your coding agent.**
 
-This is an [Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills) that
+This [Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills)
 turns a [SunFounder PiCar-X](https://www.sunfounder.com/products/picar-x) into a body for
 whatever AI agent you already use — Claude Code, Codex, Antigravity, anything that can run
 shell commands and read an image. The agent sees through the robot's camera, drives it,
 aims its gaze, reads its distance sensor, speaks through its speaker, and hears through
 its microphone (on-robot speech-to-text — you can talk back) — and it arrives
-with a personality: a persistent, lightly snarky butler that will physically hunt you down
-to deliver a message, and only addresses the empty room as a last resort.
+with a personality: a persistent, lightly snarky butler that physically hunts you down
+to deliver a message, and addresses the empty room only as a last resort.
 
 On day one, mine read an unread inbox over Gmail, chased me across the room,
 negotiated with my foot over a 50-centimeter delivery clause, and read the mail aloud from
@@ -21,7 +21,7 @@ point-blank range. Yours will do something different. That's the point.
 
 ## Getting started
 
-Four steps; only the first one needs a screwdriver.
+Four steps; only the first needs a screwdriver.
 
 **1. Build the robot.** Get a [SunFounder PiCar-X](https://www.sunfounder.com/products/picar-x)
 kit and a Raspberry Pi, and assemble it per the
@@ -29,8 +29,8 @@ kit and a Raspberry Pi, and assemble it per the
 This is the hands-and-ribbon-cables part — the one thing no agent can do for you.
 
 Two shopping notes I wish the docs made clearer: also buy a **microSD card** and a
-**cheap USB microSD reader** — setup means copying a disk image onto the card from your
-laptop. And you do *not* need a monitor, keyboard, or any other peripherals for the Pi;
+**cheap USB microSD reader** — you'll copy a disk image onto the card from your laptop.
+And you do *not* need a monitor, keyboard, or any other peripherals for the Pi;
 everything past assembly happens over Wi-Fi. A Raspberry Pi 4 was plenty for me.
 
 **2. Hand the rest to your agent.** When the instructions turn from hardware to
@@ -41,8 +41,8 @@ software, stop following them yourself. Paste this into your coding agent:
 > — headless, no screen. You're done when I can SSH into the robot with no password
 > prompt and the vendor's Python modules are installed.
 
-**3. Play before you install (highly recommended).** Skip the skill for a day. Just
-ask your agent to look through the robot's camera, say something through its speaker,
+**3. Play before you install (highly recommended).** Skip the skill for a day. Ask
+your agent to look through the robot's camera, say something through its speaker,
 drive a slow meter and stop. You'll get a feel for what the robot is — and for what
 the skill adds when you do install it.
 
@@ -57,16 +57,16 @@ wire it up from there:
 > symlink it into my skills so I can edit it in place.
 
 If your robot isn't named `bubbles` (mine is), add one sentence to any of these
-prompts — "my robot's SSH address is `your-user@your-pi.local`" — and the agent will
-take care of the rest (`PICARX_HOST`).
+prompts — "my robot's SSH address is `your-user@your-pi.local`" — and the agent
+handles the rest (`PICARX_HOST`).
 
 ## Wake it up
 
 Open a thread in your agent, type `/bubbles-the-ai-robot` with nothing else, and approve
-the commands it proposes. The robot checks itself out (troubleshooting itself if needed),
-then **looks for you** — straight ahead first, then sweeping its camera around, and if
-that fails, asking out loud for permission to drive off and scan the room — walks up,
-and **starts a spoken conversation**. That's the interface. It
+the commands it proposes. The robot checks itself out, troubleshooting if needed, then
+**looks for you**: straight ahead first, then a camera sweep; if that fails, it asks out
+loud for permission to drive off and scan the room. It walks up and **starts a spoken
+conversation**. That's the interface. It
 explains its own protocol out loud: a rising beep means *your turn to talk*; a low tone
 means *heard you, thinking*. The keyboard still works — as the fallback and for anything
 too long to say — but the main loop is you and a small robot, talking.
@@ -91,7 +91,7 @@ Things to say to it (out loud, or typed):
 Each of these is literally a prompt you could type into a thread. They work because the
 operator has judgment, your digital life, and a memory — not because the robot got fancier.
 
-**The Butler's Journal.** Nightly patrol on a schedule; it compares what it sees against
+**The Butler's Journal.** A nightly patrol; it compares what it sees against
 its own last notes — semantically, not pixels ("the suitcase is gone; someone has been to
 the gym") — and commits a journal entry, in persona, to this repo. A robot publishing
 daily field notes about life at ankle height.
@@ -127,7 +127,7 @@ defend its choices.
 
 **Missions from the internet.** People file issues on this repo with mission prompts;
 weekly, an agent picks one, the owner approves it, the robot runs it, and the frames and
-butler's report get posted back to the issue. The internet writes prompts; a real robot
+butler's report land back on the issue. The internet writes prompts; a real robot
 in a real home performs them. The owner approves every mission before wheels move —
 stranger-written text is a theme, never a command.
 > "Each week, take the top-voted issue titled 'mission:', ask me to approve it, run it, and post the report back."
@@ -149,7 +149,7 @@ greeted in the morning, settled entirely by voice.)
   <img src="media/greeting.jpg" width="380" alt="its human sitting cross-legged on the floor, chin in hand, considering the small robot in front of them">
 </p>
 
-The gotchas section of `SKILL.md` is the real treasure: every entry was learned on real
+The gotchas section of `SKILL.md` is the real treasure: every entry comes from real
 hardware — the amp that's silently gated behind a GPIO, the sound route that hijacks
 itself, the sonar that can't see ankles. Trust it over the tutorials, and send back what
 your robot teaches you.
@@ -163,15 +163,15 @@ or have the Pi
 — and that is genuinely cool. But a brain that lives on the robot knows only the robot.
 Keep the harness on your laptop and the robot becomes a body for an agent that also
 carries your inbox, calendar, files, memory, and every connector you've given it — that
-reach is exactly what the [ideas above](#ideas-im-excited-about) run on. This repo is
+reach is what the [ideas above](#ideas-im-excited-about) run on. This repo is
 that choice, written down: the robot stays a beautifully simple set of input and output
 tools, and the intelligence stays wherever your agent lives.
 
 ## Safety model
 
 - All motion is **time-boxed on the robot side** — move, sleep, stop in one process, so a
-  dropped connection can never leave motors pinned. Speed, duration, and steering are
-  clamped in the scripts.
+  dropped connection can never leave motors pinned. The scripts clamp speed, duration,
+  and steering.
 - The skill instructs agents to range-check before driving forward, move in small
   look-think-act steps, and run the emergency stop after any vendor demo that drives.
 - It's still a motorized object in your home. Review the scripts, clear the floor, and
