@@ -15,36 +15,43 @@ On day one, ours read an unread inbox over Gmail, chased its owner across the ro
 negotiated with a foot over a 50-centimeter delivery clause, and read the mail aloud from
 point-blank range. Yours will do something different. That's the point.
 
-## What you need
+## Getting started
 
-1. A **SunFounder PiCar-X** kit and a Raspberry Pi. Buy, assemble, and set it up entirely
-   per the vendor's own instructions — assembly, OS, and the
-   [Python modules install](https://docs.sunfounder.com/projects/picar-x-v20/en/latest/python/install_all_modules.html).
-   Their docs live here: **https://docs.sunfounder.com/projects/picar-x-v20/en/latest/**
-   This repo deliberately reproduces none of them.
-2. **Passwordless SSH** from your computer to the robot
-   (`ssh-copy-id your-user@your-pi.local` — the vendor and Raspberry Pi docs cover this).
+Four steps; only the first one needs a screwdriver.
 
-When `ssh your-user@your-pi.local` works with no password prompt, you're done with setup.
+**1. Build the robot.** Get a [SunFounder PiCar-X](https://www.sunfounder.com/products/picar-x)
+kit and a Raspberry Pi, and assemble it per the
+[vendor's instructions](https://docs.sunfounder.com/projects/picar-x-v20/en/latest/).
+This is the hands-and-ribbon-cables part — the one thing no agent can do for you.
 
-## Install
+**2. Hand the rest to your agent.** When the instructions turn from hardware to
+software, stop following them yourself. Paste this into your coding agent:
 
-Paste this into your agent:
+> I've assembled a SunFounder PiCar-X. Take over the software setup, starting here:
+> https://docs.sunfounder.com/projects/picar-x-v20/en/latest/_shared/pi_start/set_up_pi.html#if-you-have-no-screen-headless
+> — headless, no screen. You're done when I can SSH into the robot with no password
+> prompt and the vendor's Python modules are installed.
+
+**3. Play before you install (highly recommended).** Skip the skill for a day. Just
+ask your agent to look through the robot's camera, say something through its speaker,
+drive a slow meter and stop. You'll get a feel for what the robot is — and for what
+the skill adds when you do install it.
+
+**4. Install the skill.** When you're ready, paste this:
 
 > Install https://github.com/talsraviv/bubbles-the-ai-robot as a skill.
 
-By the way — if you want to keep modifying it and playing with it (you should — see
-[Make it yours](#make-it-yours)), put it somewhere more convenient by cloning the repo.
-Paste this instead:
+Or, if you're in a tinkering mood, have it clone the repo somewhere easy to reach and
+wire it up from there:
 
 > Clone https://github.com/talsraviv/bubbles-the-ai-robot into my projects folder and
 > symlink it into my skills so I can edit it in place.
 
-If your robot isn't named `bubbles` (ours is), add one sentence to either prompt — "my
-robot's SSH address is `your-user@your-pi.local`" — and the agent will point the scripts
-(`PICARX_HOST`) at it.
+If your robot isn't named `bubbles` (ours is), add one sentence to any of these
+prompts — "my robot's SSH address is `your-user@your-pi.local`" — and the agent will
+take care of the rest (`PICARX_HOST`).
 
-## Play
+## Wake it up
 
 Open a thread in your agent, type `/bubbles-the-ai-robot` with nothing else, and approve
 the commands it proposes. The robot checks itself out (troubleshooting itself if needed),
