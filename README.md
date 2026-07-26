@@ -166,6 +166,13 @@ reach is what the [ideas above](#ideas-im-excited-about) run on. This repo is
 that choice, written down: the robot stays a beautifully simple set of input and output
 tools, and the intelligence stays wherever your agent lives.
 
+## Inspiring prior art
+
+- [Anthropic's Project Fetch: Claude pilots a robot dog](https://www.anthropic.com/research/project-fetch-phase-two)
+- [Mario Zechner's "How to build a shitty robot"](https://mariozechner.at/posts/2026-05-30-shitty-robot/)
+- [Hugging Face's Reachy Mini, a $300 hackable desk robot](https://www.youtube.com/watch?v=0jeZfjJMfmo)
+- [Wired's "I Gave My OpenClaw Agent a Physical Body"](https://www.wired.com/story/i-gave-my-openclaw-agent-physical-body-robot/)
+
 ## Safety model
 
 - All motion is **time-boxed on the robot side** — move, sleep, stop in one process, so a
