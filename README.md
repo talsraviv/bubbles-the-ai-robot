@@ -40,12 +40,19 @@ software, stop following them yourself. Paste this into your coding agent:
 > — headless, no screen. You're done when I can SSH into the robot with no password
 > prompt and the vendor's Python modules are installed.
 
-**3. Play before you install (highly recommended).** Skip the skill for a day. Ask
-your agent to look through the robot's camera, say something through its speaker,
-drive a slow meter and stop. You'll get a feel for what the robot is — and for what
-the skill adds when you do install it.
+**3. Play before you install (highly recommended).** The hard part is now behind
+you — a robot on your Wi-Fi that your agent can reach over SSH is the whole trick.
+So skip the skill for a day and just have fun: ask your agent to look through the
+robot's camera, say something through its speaker, drive a slow meter and stop. Then
+keep going wherever the conversation leads. Your agent can figure this robot out on
+its own; it doesn't need my help. And when you land somewhere you like, end with:
 
-**4. Install the skill.** When you're ready, paste this:
+> Turn everything you've learned about controlling this robot into a skill.
+
+Now you have your own version of this repo. Mine is just the one I arrived at — a
+head start if you want it, nothing more.
+
+**4. Install the skill.** If you do want my version, paste this:
 
 > Install https://github.com/talsraviv/bubbles-the-ai-robot as a skill.
 
