@@ -2,8 +2,7 @@
 
 **Give a real robot to your coding agent.**
 
-This [Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills)
-turns a [SunFounder PiCar-X](https://www.sunfounder.com/products/picar-x) into a body for
+This skill turns a [SunFounder PiCar-X](https://www.sunfounder.com/products/picar-x) into a body for
 whatever AI agent you already use — Claude Code, Codex, Antigravity, anything that can run
 shell commands and read an image. The agent sees through the robot's camera, drives it,
 aims its gaze, reads its distance sensor, speaks through its speaker, and hears through
