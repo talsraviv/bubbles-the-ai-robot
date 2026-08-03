@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# One survey waypoint in a single SSH round trip:
+#   optional time-boxed drive -> forward sonar range -> camera pan sweep -> pull frames.
+# Usage: waypoint OUTDIR SPEED SECS STEER TILT PAN...
+#   SPEED 0 means "don't drive, just range and look".
+set -euo pipefail
+HOST="${PICARX_HOST:-bubbles@bubbles.local}"
+OUTDIR="${1:?usage: waypoint OUTDIR SPEED SECS STEER TILT PAN...}"; shift
+SPEED="$1"; shift
+SECS="$1"; shift
+STEER="$1"; shift
+TILT="$1"; shift
+PANS="$*"
+
+mkdir -p "$OUTDIR"
+
+ssh "$HOST" "SPEED=$SPEED SECS=$SECS STEER=$STEER TILT=$TILT PANS='$PANS' python3 - <<'PY'
+import os, time, subprocess
+from picarx import Picarx
+
+speed = max(-60, min(60, int(os.environ['SPEED'])))
+secs  = max(0.0, min(3.0, float(os.environ['SECS'])))
+steer = max(-30, min(30, int(os.environ['STEER'])))
+tilt  = int(os.environ['TILT'])
+pans  = [int(p) for p in os.environ['PANS'].split()]
+
+def rng(px, n=6):
+    vals = []
+    for _ in range(n):
+        d = px.get_distance()
+        if d and d > 0:
+            vals.append(round(d, 1))
+        time.sleep(0.05)
+    return sorted(vals)[len(vals)//2] if vals else -1
+
+subprocess.run('rm -f /dev/shm/pano_*.jpg', shell=True)
+px = Picarx()
+try:
+    px.set_cam_pan_angle(0); px.set_cam_tilt_angle(0)
+
+    if speed != 0 and secs > 0:
+        print(f'range_before={rng(px)}', flush=True)
+        px.set_dir_servo_angle(steer)
+        time.sleep(0.25)
+        (px.forward if speed > 0 else px.backward)(abs(speed))
+        time.sleep(secs)
+        px.stop()
+        px.set_dir_servo_angle(0)
+        time.sleep(0.5)
+        print(f'drove speed={speed} secs={secs} steer={steer}', flush=True)
+
+    print(f'range_after={rng(px)}', flush=True)
+
+    px.set_cam_tilt_angle(tilt)
+    for pan in pans:
+        px.set_cam_pan_angle(pan)
+        time.sleep(0.5)
+        tag = f'{pan:+04d}'.replace('+','p').replace('-','m')
+        try:
+            # Hard timeout: a wedged rpicam-still must fail fast, never hang the
+            # session. Killing it mid-capture is what broke the driver last time.
+            subprocess.run(
+                ['rpicam-still','-n','-t','500','--width','1296','--height','972',
+                 '-o', f'/dev/shm/pano_{tag}.jpg'],
+                check=True, stderr=subprocess.DEVNULL, timeout=20)
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+            print(f'WARN pan={pan} capture failed: {type(e).__name__}', flush=True)
+    print('panorama captured: ' + ' '.join(str(p) for p in pans), flush=True)
+finally:
+    px.stop()
+    px.set_dir_servo_angle(0)
+    px.set_cam_pan_angle(0); px.set_cam_tilt_angle(0)
+PY"
+
+scp -q "$HOST:/dev/shm/pano_*.jpg" "$OUTDIR/"

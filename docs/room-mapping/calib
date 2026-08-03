@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Stepped measurement. The sonar is unusable while the motors run (verified:
+# readings scattered 59-173 cm during a single 1.2 s drive), so this ranges only
+# at rest: settle -> range -> drive a fixed step -> settle -> range.
+# Each step's range delta is a real displacement in cm.
+# Usage: calib SPEED STEP_SECS STEPS
+set -euo pipefail
+HOST="${PICARX_HOST:-bubbles@bubbles.local}"
+SPEED="${1:--30}"
+STEP="${2:-0.8}"
+N="${3:-3}"
+
+ssh "$HOST" "SPEED=$SPEED STEP=$STEP N=$N python3 - <<'PY'
+import os, time, statistics
+from picarx import Picarx
+
+speed = int(os.environ['SPEED'])
+step  = float(os.environ['STEP'])
+n     = int(os.environ['N'])
+
+def rng(px, samples=15):
+    # Median of a decent sample: individual pings drop out on angled surfaces.
+    vals = []
+    for _ in range(samples):
+        d = px.get_distance()
+        if d and 2 < d < 400:
+            vals.append(d)
+        time.sleep(0.035)
+    if not vals:
+        return None
+    return round(statistics.median(vals), 1)
+
+px = Picarx()
+try:
+    px.set_cam_pan_angle(0); px.set_cam_tilt_angle(0)
+    px.set_dir_servo_angle(0)
+    time.sleep(0.6)
+
+    prev = rng(px)
+    print(f'start_range={prev}', flush=True)
+    for i in range(n):
+        (px.forward if speed > 0 else px.backward)(abs(speed))
+        time.sleep(step)
+        px.stop()
+        time.sleep(0.8)                 # let the chassis settle before ranging
+        cur = rng(px)
+        if prev is None or cur is None:
+            print(f'step {i+1}: range={cur} (no delta)', flush=True)
+        else:
+            d = cur - prev
+            print(f'step {i+1}: range={cur:.1f} delta={d:+.1f} cm  '
+                  f'=> {abs(d)/step:.0f} cm/s at speed {speed}', flush=True)
+        prev = cur
+finally:
+    px.stop(); px.set_dir_servo_angle(0)
+PY"

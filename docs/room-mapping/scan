@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Dense spherical scan from the current spot: every tilt x every pan, in one
+# SSH round trip, then pulled back together.
+# Usage: scan OUTDIR "TILT..." "PAN..." [WIDTH HEIGHT]
+set -euo pipefail
+HOST="${PICARX_HOST:-bubbles@bubbles.local}"
+OUTDIR="${1:?usage: scan OUTDIR \"TILTS\" \"PANS\" [W H]}"
+TILTS="${2:?}"
+PANS="${3:?}"
+IW="${4:-1920}"
+IH="${5:-1440}"
+
+mkdir -p "$OUTDIR"
+
+ssh "$HOST" "TILTS='$TILTS' PANS='$PANS' IW=$IW IH=$IH python3 - <<'PY'
+import os, time, subprocess
+from picarx import Picarx
+
+tilts = [int(t) for t in os.environ['TILTS'].split()]
+pans  = [int(p) for p in os.environ['PANS'].split()]
+iw, ih = os.environ['IW'], os.environ['IH']
+
+def rng(px, n=8):
+    vals = []
+    for _ in range(n):
+        d = px.get_distance()
+        if d and d > 0: vals.append(round(d,1))
+        time.sleep(0.04)
+    return sorted(vals)[len(vals)//2] if vals else -1
+
+subprocess.run('rm -f /dev/shm/scan_*.jpg', shell=True)
+px = Picarx()
+try:
+    px.set_cam_pan_angle(0); px.set_cam_tilt_angle(0)
+    time.sleep(0.4)
+    print(f'range_forward={rng(px)}', flush=True)
+
+    ok = fail = 0
+    for tilt in tilts:
+        px.set_cam_tilt_angle(tilt)
+        for pan in pans:
+            px.set_cam_pan_angle(pan)
+            time.sleep(0.45)
+            tag = f't{tilt:+03d}_p{pan:+04d}'.replace('+','p').replace('-','m')
+            try:
+                subprocess.run(
+                    ['rpicam-still','-n','-t','450','--width',iw,'--height',ih,
+                     '-o', f'/dev/shm/scan_{tag}.jpg'],
+                    check=True, stderr=subprocess.DEVNULL, timeout=20)
+                ok += 1
+            except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                fail += 1
+                print(f'WARN capture failed t={tilt} p={pan}', flush=True)
+    print(f'captured ok={ok} failed={fail}', flush=True)
+finally:
+    px.stop(); px.set_dir_servo_angle(0)
+    px.set_cam_pan_angle(0); px.set_cam_tilt_angle(0)
+PY"
+
+scp -q "$HOST:/dev/shm/scan_*.jpg" "$OUTDIR/"
+ls "$OUTDIR" | wc -l

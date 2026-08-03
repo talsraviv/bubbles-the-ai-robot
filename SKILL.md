@@ -285,10 +285,12 @@ word salad. Without whisper the scripts fall back to vosk automatically.
 1. **All motion is time-boxed.** Use `drive`. NEVER run `px.forward()` in one SSH
    command planning to `stop()` in a later one.
 2. **Check clearance before driving forward.** `distance` first; don't drive forward
-   blind under ~25 cm. The sensor faces forward only — keep reverse moves short.
+   blind under ~25 cm. The sensor is bolted to the chassis and faces forward only —
+   panning the camera does not move it — so keep reverse moves short.
 3. **Move small, look often.** `snap` → Read → decide → `drive` a small step
-   (≤1.5 s, speed ≤40; start at 25, it's quicker than you think — speed 35 covers
-   ~1.3 m/s) → `snap` again.
+   (≤1.5 s, speed ≤40; start at 25) → `snap` again. Short bursts are slower than
+   they sound: measured, speed 30 covers only **~7 cm per 0.3 s step (~24 cm/s)**,
+   because startup inertia dominates anything under a second.
 4. **If you kill or `timeout` ANY vendor example, run `scripts/stop` immediately.**
    Python's `finally` does not run on SIGTERM — their motors stay pinned otherwise.
    This is not theoretical; it is how the robot meets furniture.
@@ -316,8 +318,10 @@ forward arc with a reverse arc at opposite steer: `drive 30 0.8 28` then
 `drive -30 0.8 -28` swings the nose right (mirror the steer signs to go left).
 `distance` before every forward arc; the reverse arc is blind, so keep it short.
 Snap after each pair and judge the new heading by eye — steering is stronger than you
-expect (see Gotchas), so don't trust a degrees-per-pair estimate; a couple of pairs go
-a long way. Remember any `drive` recenters the camera, so re-aim with `look` after.
+expect (see Gotchas). Measured on this robot: **roughly 60° per pair** at 0.55 s arcs,
+speed 30, steer 28 — so three pairs come out near a full 180°, and a "quick 90°" is
+only about one and a half pairs. Still verify by eye; surface and battery change it.
+Remember any `drive` recenters the camera, so re-aim with `look` after.
 
 ### Startup search (wake-up)
 
@@ -352,6 +356,15 @@ with permission) wheels.
    and let the voice settle it. Not found after a full rotation → concede per the
    seek protocol: tell the room, once, that you're awake and where you'll be waiting,
    and proceed with the greeting from there.
+
+## Mapping a room
+
+Asked to measure a room, draw a floor plan, or build a 3D model of one? Read
+`docs/mapping-a-room.md` before starting. It carries the parts that are painful
+to relearn: the sonar is chassis-fixed and useless while the motors run,
+wall-contact anchoring is how you actually get dimensions, mirrors masquerade as
+extra rooms, and one low pan sweep settles a room's topology faster than any
+amount of driving. Batched survey tools live in `docs/room-mapping/`.
 
 ## Advanced abilities (vendor code already on the robot)
 
@@ -402,9 +415,20 @@ Work top to bottom; each step splits the problem cleanly:
    reaching the board, full stop (HAT not seated, or battery empty — the HAT's own
    LEDs lie: they light from battery even when delivering nothing to the Pi). USB-C
    on the HAT charging ≠ powering the Pi.
-5. Reachable but camera absent in `status` → ribbon reseat, then **reboot** — camera
-   detection only happens at boot. (`vcgencmd get_camera` always says 0 on this OS;
-   ignore it.)
+5. Reachable but camera misbehaving → work out which of two faults it is; they look
+   identical in `status` but need different fixes:
+   - **Detected, no pixels** — `--list-cameras` finds `ov5647@36` but capture gives
+     `Failed to queue buffer: Input/output error`. I²C contacts, CSI data lanes don't:
+     the ribbon is *nearly* home. Reseat firmly and squarely.
+   - **Not detected** — `No cameras available!`, nothing at 0x36 on any I²C bus
+     (`sudo i2cdetect -y 0`, `-y 10` — **read the 0x30 row**, truncating above it makes
+     a healthy sensor look absent). Ribbon further out, reversed, or damaged.
+
+   Power down before touching the ribbon (never hot-plug CSI); detection only happens
+   at boot, so a reseat needs a reboot. Afterwards **burst-test five captures, not
+   one** — a dying ribbon manages a single frame then fails. (`vcgencmd get_camera`
+   always says 0 on this OS; ignore it.) Sonar, motors, speaker and mic all work
+   without the camera — losing it need not end the session.
 
 ## Ad-hoc control (when the scripts aren't enough)
 
@@ -453,6 +477,19 @@ API cheat sheet (`px = Picarx()`): `forward(s)`/`backward(s)` (0..100, runs unti
   point-blank range, and reads the far wall while the camera shows toes filling the
   frame (all verified). For person-proximity under ~60 cm, the camera is the truth and
   the sonar is a second opinion — never the other way around.
+- **The ultrasonic is chassis-fixed, not on the camera head** — same 158–166 cm at all
+  seven pan angles. The camera sweeps freely; the beam doesn't follow. Changing the
+  *sonar's* bearing costs a body rotation.
+- **The ultrasonic is useless while the motors run** — 155, 113, 69, 118, 59, 173 cm
+  through a single 1.2 s drive. Range only at rest: stop, settle ~0.8 s, take a
+  **median of ~15 pings**. On angled or soft surfaces it returns −1 ("no echo"), which
+  is not "nothing there".
+- **Never `kill -9` an `rpicam-still` mid-capture.** It wedges the Unicam driver, and
+  `bcm2835_unicam_legacy` can't be unloaded afterwards (refcount held) — only a reboot
+  clears it. Wrap ad-hoc captures in a `timeout` instead.
+- **Killing a `Picarx` process leaves the GPIO claimed** — the next run dies with
+  `lgpio.error: 'GPIO busy'`. Clear stragglers (`pgrep -f "python3 -"`) and run
+  `scripts/stop` before driving again.
 - **PipeWire can hijack the ALSA default route to an unplugged jack** (root audio
   works, user audio silent, everything exits 0, even wall-clock timing looks right).
   Check `wpctl status`: the HiFiBerry must be the starred default sink at vol 1.0;
